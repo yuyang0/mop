@@ -5,9 +5,10 @@
 package main
 
 import (
-	`github.com/mop-tracker/mop`
-	`github.com/michaeldv/termbox-go`
-	`time`
+	"time"
+
+	"github.com/michaeldv/termbox-go"
+	"github.com/yuyang0/mop"
 )
 
 const help = `Mop v0.2.0 -- Copyright (c) 2013-2016 by Michael Dvorkin. All Rights Reserved.

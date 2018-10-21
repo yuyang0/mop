@@ -5,12 +5,14 @@
 package mop
 
 import (
-	`bytes`
-	`fmt`
-	`io/ioutil`
-	`net/http`
-	`reflect`
-	`strings`
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"regexp"
+
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 )
 
 // See http://www.gummy-stuff.org/Yahoo-stocks.htm
@@ -19,11 +21,21 @@ import (
 // c2: realtime change vs c1: change
 // k2: realtime change vs p2: change
 //
-const quotesURL = `http://download.finance.yahoo.com/d/quotes.csv?s=%s&f=sl1c1p2oghjkva2r2rdyj3j1`
+const quotesURL = `http://qt.gtimg.cn/q=%s`
+
+func GbkToUtf8(s []byte) ([]byte, error) {
+	reader := transform.NewReader(bytes.NewReader(s), simplifiedchinese.GBK.NewDecoder())
+	d, e := ioutil.ReadAll(reader)
+	if e != nil {
+		return nil, e
+	}
+	return d, nil
+}
 
 // Stock stores quote information for the particular stock ticker. The data
 // for all the fields except 'Advancing' is fetched using Yahoo market API.
 type Stock struct {
+	Name       string // stock name
 	Ticker     string // Stock ticker.
 	LastTrade  string // l1: last trade.
 	Change     string // c6: change real time.
@@ -35,6 +47,7 @@ type Stock struct {
 	High52     string // k: 52-weeks high.
 	Volume     string // v: volume.
 	AvgVolume  string // a2: average volume.
+	Turnover   string
 	PeRatio    string // r2: P/E ration real time.
 	PeRatioX   string // r: P/E ration (fallback when real time is N/A).
 	Dividend   string // d: dividend.
@@ -50,14 +63,21 @@ type Quotes struct {
 	market  *Market  // Pointer to Market.
 	profile *Profile // Pointer to Profile.
 	stocks  []Stock  // Array of stock quote data.
-	errors  string   // Error string if any.
+	re      *regexp.Regexp
+	errors  string // Error string if any.
 }
 
 // Sets the initial values and returns new Quotes struct.
 func NewQuotes(market *Market, profile *Profile) *Quotes {
+	re, err := regexp.Compile("_\\w+")
+	if err != nil {
+		//TODO
+		fmt.Print("error when create regex")
+	}
 	return &Quotes{
 		market:  market,
 		profile: profile,
+		re:      re,
 		errors:  ``,
 	}
 }
@@ -67,13 +87,14 @@ func NewQuotes(market *Market, profile *Profile) *Quotes {
 func (quotes *Quotes) Fetch() (self *Quotes) {
 	self = quotes // <-- This ensures we return correct quotes after recover() from panic().
 	if quotes.isReady() {
-		defer func() {
-			if err := recover(); err != nil {
-				quotes.errors = fmt.Sprintf("\n\n\n\nError fetching stock quotes...\n%s", err)
-			}
-		}()
+		// defer func() {
+		// 	if err := recover(); err != nil {
+		// 		quotes.errors = fmt.Sprintf("\n\n\n\nError fetching stock quotes...\n%s", err)
+		// 	}
+		// }()
 
-		url := fmt.Sprintf(quotesURL, strings.Join(quotes.profile.Tickers, `+`))
+		// url := fmt.Sprintf(quotesURL, strings.Join(quotes.profile.Tickers, `,`))
+		url := fmt.Sprintf(quotesURL, "sh601225,sh600188")
 		response, err := http.Get(url)
 		if err != nil {
 			panic(err)
@@ -127,22 +148,47 @@ func (quotes *Quotes) isReady() bool {
 // Use reflection to parse and assign the quotes data fetched using the Yahoo
 // market API.
 func (quotes *Quotes) parse(body []byte) *Quotes {
-	lines := bytes.Split(body, []byte{'\n'})
+	lines := bytes.Split(body, []byte{';'})
 	quotes.stocks = make([]Stock, len(lines))
 	//
 	// Get the total number of fields in the Stock struct. Skip the last
 	// Advanicing field which is not fetched.
 	//
-	fieldsCount := reflect.ValueOf(quotes.stocks[0]).NumField() - 1
+	// fieldsCount := reflect.ValueOf(quotes.stocks[0]).NumField() - 1
 	//
 	// Split each line into columns, then iterate over the Stock struct
 	// fields to assign column values.
 	//
 	for i, line := range lines {
-		columns := bytes.Split(bytes.TrimSpace(line), []byte{','})
-		for j := 0; j < fieldsCount; j++ {
-			// ex. quotes.stocks[i].Ticker = string(columns[0])
-			reflect.ValueOf(&quotes.stocks[i]).Elem().Field(j).SetString(string(columns[j]))
+		if len(line) == 0 {
+			break
+		}
+		stockCode := quotes.re.Find(line)
+		if len(stockCode) > 0 {
+			stockCode = stockCode[1:]
+		}
+		columns := bytes.Split(bytes.TrimSpace(line), []byte{'~'})
+		stockName, _ := GbkToUtf8(columns[1])
+		quotes.stocks[i] = Stock{
+			Name:       string(stockName),
+			Ticker:     string(stockCode),
+			LastTrade:  string(columns[3]),
+			Change:     string(columns[31]),
+			ChangePct:  string(columns[32]),
+			Open:       string(columns[5]),
+			Low:        string(columns[34]),
+			High:       string(columns[33]),
+			Low52:      "N/A",
+			High52:     "N/A",
+			Volume:     string(columns[36]),
+			AvgVolume:  "N/A",
+			Turnover:   string(columns[37]),
+			PeRatio:    string(columns[39]),
+			PeRatioX:   "N/A",
+			Dividend:   "N/A",
+			Yield:      "N/A",
+			MarketCap:  string(columns[45]),
+			MarketCapX: "N/A",
 		}
 		//
 		// Try realtime value and revert to the last known if the
@@ -166,5 +212,5 @@ func (quotes *Quotes) parse(body []byte) *Quotes {
 
 //-----------------------------------------------------------------------------
 func sanitize(body []byte) []byte {
-	return bytes.Replace(bytes.TrimSpace(body), []byte{'"'}, []byte{}, -1)
+	return bytes.Replace(bytes.TrimSpace(body), []byte{'\n'}, []byte{}, -1)
 }

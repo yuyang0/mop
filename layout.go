@@ -5,13 +5,13 @@
 package mop
 
 import (
-	`bytes`
-	`fmt`
-	`reflect`
-	`regexp`
-	`strings`
-	`text/template`
-	`time`
+	"bytes"
+	"fmt"
+	"html/template"
+	"reflect"
+	"regexp"
+	"strings"
+	"time"
 )
 
 // Column describes formatting rules for individual column within the list
@@ -37,7 +37,8 @@ type Layout struct {
 func NewLayout() *Layout {
 	layout := &Layout{}
 	layout.columns = []Column{
-		{-7, `Ticker`, `Ticker`, nil},
+		{-7, `Name`, `Name`, nil},
+		{8, `Ticker`, `Ticker`, nil},
 		{10, `LastTrade`, `Last`, currency},
 		{10, `Change`, `Change`, currency},
 		{10, `ChangePct`, `Change%`, last},
@@ -198,7 +199,7 @@ func buildQuotesTemplate() *template.Template {
 
 
 {{.Header}}
-{{range.Stocks}}{{if .Advancing}}<green>{{end}}{{.Ticker}}{{.LastTrade}}{{.Change}}{{.ChangePct}}{{.Open}}{{.Low}}{{.High}}{{.Low52}}{{.High52}}{{.Volume}}{{.AvgVolume}}{{.PeRatio}}{{.Dividend}}{{.Yield}}{{.MarketCap}}</>
+{{range.Stocks}}{{if .Advancing}}<green>{{end}}{{.Name}}{{.Ticker}}{{.LastTrade}}{{.Change}}{{.ChangePct}}{{.Open}}{{.Low}}{{.High}}{{.Low52}}{{.High52}}{{.Volume}}{{.AvgVolume}}{{.PeRatio}}{{.Dividend}}{{.Yield}}{{.MarketCap}}</>
 {{end}}`
 
 	return template.Must(template.New(`quotes`).Parse(markup))
@@ -277,11 +278,7 @@ func currency(str string) string {
 	if str == `N/A` {
 		return `-`
 	}
-	if sign := str[0:1]; sign == `+` || sign == `-` {
-		return sign + `$` + str[1:]
-	}
-
-	return `$` + str
+	return str
 }
 
 // Returns percent value truncated at 2 decimal points.
@@ -290,7 +287,9 @@ func percent(str string) string {
 	if str == `N/A` {
 		return `-`
 	}
-
+	if len(str) == 0 {
+		return str
+	}
 	split := strings.Split(str, ".")
 	if len(split) == 2 {
 		digits := len(split[1])
