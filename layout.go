@@ -7,10 +7,10 @@ package mop
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"reflect"
 	"regexp"
 	"strings"
+	"text/template"
 	"time"
 )
 
@@ -68,9 +68,8 @@ func (layout *Layout) Market(market *Market) string {
 		return err // then simply return the error string.
 	}
 
-	highlight(market.Dow, market.Sp500, market.Nasdaq,
-		market.Tokyo, market.HongKong, market.London, market.Frankfurt,
-		market.Yield, market.Oil, market.Euro, market.Gold)
+	highlight(market.ShIndex, market.SzIndex, market.CybIndex, market.Dow, market.Sp500, market.Nasdaq,
+		market.HongKong)
 	buffer := new(bytes.Buffer)
 	layout.marketTemplate.Execute(buffer, market)
 
@@ -185,9 +184,9 @@ func (layout *Layout) pad(str string, width int) string {
 
 //-----------------------------------------------------------------------------
 func buildMarketTemplate() *template.Template {
-	markup := `<yellow>Dow</> {{.Dow.change}} ({{.Dow.percent}}) at {{.Dow.latest}} <yellow>S&P 500</> {{.Sp500.change}} ({{.Sp500.percent}}) at {{.Sp500.latest}} <yellow>NASDAQ</> {{.Nasdaq.change}} ({{.Nasdaq.percent}}) at {{.Nasdaq.latest}}
-<yellow>Tokyo</> {{.Tokyo.change}} ({{.Tokyo.percent}}) at {{.Tokyo.latest}} <yellow>HK</> {{.HongKong.change}} ({{.HongKong.percent}}) at {{.HongKong.latest}} <yellow>London</> {{.London.change}} ({{.London.percent}}) at {{.London.latest}} <yellow>Frankfurt</> {{.Frankfurt.change}} ({{.Frankfurt.percent}}) at {{.Frankfurt.latest}} {{if .IsClosed}}<right>U.S. markets closed</right>{{end}}
-<yellow>10-Year Yield</> {{.Yield.latest}}% ({{.Yield.change}}) <yellow>Euro</> ${{.Euro.latest}} ({{.Euro.change}}%) <yellow>Yen</> ¥{{.Yen.latest}} ({{.Yen.change}}%) <yellow>Oil</> ${{.Oil.latest}} ({{.Oil.change}}%) <yellow>Gold</> ${{.Gold.latest}} ({{.Gold.change}}%)`
+	markup := `<yellow>SH</> {{.ShIndex.latest}} ({{.ShIndex.percent}}) <yellow>SZ</> {{.SzIndex.latest}} ({{.SzIndex.percent}}) <yellow>CYB</> {{.CybIndex.latest}} ({{.CybIndex.percent}})
+<yellow>HK</> {{.HongKong.latest}} ({{.HongKong.percent}})
+<yellow>Dow</> {{.Dow.change}} ({{.Dow.percent}}) at {{.Dow.latest}} <yellow>S&P 500</> {{.Sp500.change}} ({{.Sp500.percent}}) at {{.Sp500.latest}} <yellow>NASDAQ</> {{.Nasdaq.change}} ({{.Nasdaq.percent}}) at {{.Nasdaq.latest}}`
 
 	return template.Must(template.New(`market`).Parse(markup))
 }
@@ -199,7 +198,7 @@ func buildQuotesTemplate() *template.Template {
 
 
 {{.Header}}
-{{range.Stocks}}{{if .Advancing}}<green>{{end}}{{.Name}}{{.Ticker}}{{.LastTrade}}{{.Change}}{{.ChangePct}}{{.Open}}{{.Low}}{{.High}}{{.Low52}}{{.High52}}{{.Volume}}{{.AvgVolume}}{{.PeRatio}}{{.Dividend}}{{.Yield}}{{.MarketCap}}</>
+{{range.Stocks}}{{if .Advancing}}<red>{{else}}<green>{{end}}{{.Name}}{{.Ticker}}{{.LastTrade}}{{.Change}}{{.ChangePct}}{{.Open}}{{.Low}}{{.High}}{{.Low52}}{{.High52}}{{.Volume}}{{.AvgVolume}}{{.PeRatio}}{{.Dividend}}{{.Yield}}{{.MarketCap}}</>
 {{end}}`
 
 	return template.Must(template.New(`quotes`).Parse(markup))
@@ -209,7 +208,11 @@ func buildQuotesTemplate() *template.Template {
 func highlight(collections ...map[string]string) {
 	for _, collection := range collections {
 		if collection[`change`][0:1] != `-` {
+			collection[`change`] = `<red>` + collection[`change`] + `</>`
+			collection[`percent`] = `<red>` + collection[`percent`] + "%" + `</>`
+		} else {
 			collection[`change`] = `<green>` + collection[`change`] + `</>`
+			collection[`percent`] = `<green>` + collection[`percent`] + "%" + `</>`
 		}
 	}
 }

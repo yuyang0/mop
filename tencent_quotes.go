@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
@@ -87,14 +88,13 @@ func NewQuotes(market *Market, profile *Profile) *Quotes {
 func (quotes *Quotes) Fetch() (self *Quotes) {
 	self = quotes // <-- This ensures we return correct quotes after recover() from panic().
 	if quotes.isReady() {
-		// defer func() {
-		// 	if err := recover(); err != nil {
-		// 		quotes.errors = fmt.Sprintf("\n\n\n\nError fetching stock quotes...\n%s", err)
-		// 	}
-		// }()
+		defer func() {
+			if err := recover(); err != nil {
+				quotes.errors = fmt.Sprintf("\n\n\n\nError fetching stock quotes...\n%s", err)
+			}
+		}()
 
-		// url := fmt.Sprintf(quotesURL, strings.Join(quotes.profile.Tickers, `,`))
-		url := fmt.Sprintf(quotesURL, "sh601225,sh600188")
+		url := fmt.Sprintf(quotesURL, strings.Join(quotes.profile.Tickers, `,`))
 		response, err := http.Get(url)
 		if err != nil {
 			panic(err)
@@ -150,15 +150,7 @@ func (quotes *Quotes) isReady() bool {
 func (quotes *Quotes) parse(body []byte) *Quotes {
 	lines := bytes.Split(body, []byte{';'})
 	quotes.stocks = make([]Stock, len(lines))
-	//
-	// Get the total number of fields in the Stock struct. Skip the last
-	// Advanicing field which is not fetched.
-	//
-	// fieldsCount := reflect.ValueOf(quotes.stocks[0]).NumField() - 1
-	//
-	// Split each line into columns, then iterate over the Stock struct
-	// fields to assign column values.
-	//
+
 	for i, line := range lines {
 		if len(line) == 0 {
 			break
