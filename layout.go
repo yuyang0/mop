@@ -68,7 +68,7 @@ func (layout *Layout) Market(market *Market) string {
 		return err // then simply return the error string.
 	}
 
-	highlight(market.ShIndex, market.SzIndex, market.CybIndex, market.Dow, market.Sp500, market.Nasdaq,
+	highlight(market.Hs300Index, market.ShIndex, market.SzIndex, market.CybIndex, market.Dow, market.Sp500, market.Nasdaq,
 		market.HongKong)
 	buffer := new(bytes.Buffer)
 	layout.marketTemplate.Execute(buffer, market)
@@ -184,7 +184,7 @@ func (layout *Layout) pad(str string, width int) string {
 
 //-----------------------------------------------------------------------------
 func buildMarketTemplate() *template.Template {
-	markup := `<yellow>SH</> {{.ShIndex.latest}} ({{.ShIndex.percent}}) <yellow>SZ</> {{.SzIndex.latest}} ({{.SzIndex.percent}}) <yellow>CYB</> {{.CybIndex.latest}} ({{.CybIndex.percent}})
+	markup := `<yellow>SH</> {{.ShIndex.latest}} ({{.ShIndex.percent}}) <yellow>SZ</> {{.SzIndex.latest}} ({{.SzIndex.percent}}) <yellow>CYB</> {{.CybIndex.latest}} ({{.CybIndex.percent}}) <yellow>HS300</> {{.Hs300Index.latest}} ({{.Hs300Index.percent}})
 <yellow>HK</> {{.HongKong.latest}} ({{.HongKong.percent}})
 <yellow>Dow</> {{.Dow.change}} ({{.Dow.percent}}) at {{.Dow.latest}} <yellow>S&P 500</> {{.Sp500.change}} ({{.Sp500.percent}}) at {{.Sp500.latest}} <yellow>NASDAQ</> {{.Nasdaq.change}} ({{.Nasdaq.percent}}) at {{.Nasdaq.latest}}`
 

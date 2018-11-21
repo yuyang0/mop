@@ -11,29 +11,30 @@ import (
 	"regexp"
 )
 
-const marketURL = `http://qt.gtimg.cn/?q=sh000001,sz399001,sz399006,hkHSI,hkHSCEI,usDJI,usINX,usIXIC`
+const marketURL = `http://qt.gtimg.cn/?q=sh000001,sh000300,sz399001,sz399006,hkHSI,hkHSCEI,usDJI,usINX,usIXIC`
 
 // Market stores current market information displayed in the top three lines of
 // the screen. The market data is fetched and parsed from the HTML page above.
 type Market struct {
-	IsClosed  bool              // True when U.S. markets are closed.
-	ShIndex   map[string]string // 上证指数
-	SzIndex   map[string]string // 深圳成指
-	CybIndex  map[string]string //创业板指数
-	Dow       map[string]string // Hash of Dow Jones indicators.
-	Nasdaq    map[string]string // Hash of NASDAQ indicators.
-	Sp500     map[string]string // Hash of S&P 500 indicators.
-	Tokyo     map[string]string
-	HongKong  map[string]string
-	London    map[string]string
-	Frankfurt map[string]string
-	Yield     map[string]string
-	Oil       map[string]string
-	Yen       map[string]string
-	Euro      map[string]string
-	Gold      map[string]string
-	regex     *regexp.Regexp // Regex to parse market data from HTML.
-	errors    string         // Error(s), if any.
+	IsClosed   bool              // True when U.S. markets are closed.
+	ShIndex    map[string]string // 上证指数
+	SzIndex    map[string]string // 深圳成指
+	CybIndex   map[string]string //创业板指数
+	Hs300Index map[string]string
+	Dow        map[string]string // Hash of Dow Jones indicators.
+	Nasdaq     map[string]string // Hash of NASDAQ indicators.
+	Sp500      map[string]string // Hash of S&P 500 indicators.
+	Tokyo      map[string]string
+	HongKong   map[string]string
+	London     map[string]string
+	Frankfurt  map[string]string
+	Yield      map[string]string
+	Oil        map[string]string
+	Yen        map[string]string
+	Euro       map[string]string
+	Gold       map[string]string
+	regex      *regexp.Regexp // Regex to parse market data from HTML.
+	errors     string         // Error(s), if any.
 }
 
 // Returns new initialized Market struct.
@@ -43,6 +44,7 @@ func NewMarket() *Market {
 	market.ShIndex = make(map[string]string)
 	market.SzIndex = make(map[string]string)
 	market.CybIndex = make(map[string]string)
+	market.Hs300Index = make(map[string]string)
 	market.Dow = make(map[string]string)
 	market.Nasdaq = make(map[string]string)
 	market.Sp500 = make(map[string]string)
@@ -129,6 +131,10 @@ func (market *Market) extract(body []byte) *Market {
 			market.ShIndex[`change`] = string(columns[31])
 			market.ShIndex[`latest`] = string(columns[3])
 			market.ShIndex[`percent`] = string(columns[32])
+		case "sh000300":
+			market.Hs300Index[`change`] = string(columns[31])
+			market.Hs300Index[`latest`] = string(columns[3])
+			market.Hs300Index[`percent`] = string(columns[32])
 		case "sz399001":
 			market.SzIndex[`change`] = string(columns[31])
 			market.SzIndex[`latest`] = string(columns[3])
