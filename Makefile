@@ -3,7 +3,7 @@
 # be found in the LICENSE file.
 
 VERSION = 0.2.0
-PACKAGE = github.com/michaeldv/mop/cmd/mop
+PACKAGE = github.com/yuyang0/mop/cmd/mop
 
 run:
 	go run ./cmd/mop/main.go
